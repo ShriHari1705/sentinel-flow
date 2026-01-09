@@ -1,0 +1,12 @@
+.terraform/
+*.tfstate
+*.tfvars
+terraform.tfstate.backup
+__pycache__/
+.env
+.dbtenv/
+dbt_venv/
+target/
+logs/
+profiles.yml
+*.csv

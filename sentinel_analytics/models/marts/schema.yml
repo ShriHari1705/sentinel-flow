@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: raw_data
+    database: SENTINEL_DB
+    schema: RAW
+    tables:
+      - name: raw_transactions
+        description: "Raw JSON transaction data ingested from AWS S3."
+
+models:
+  - name: fct_financial_transactions
+    description: "The Gold table containing structured and risk-scored transactions."
+    columns:
+      - name: transaction_id
+        data_tests:  # Using the modern 'data_tests' syntax
+          - unique
+          - not_null
+      - name: amount_gbp
+        data_tests:
+          - accepted_values:
+              values: [0, 1000000]
+              quote: false

@@ -33,20 +33,25 @@ def stream_data():
         # Initial test to see if we can talk to the bucket
         s3.head_bucket(Bucket=BUCKET_NAME)
         print("Connection Successful! Starting stream...")
-        
+        batch = []
+        BATCH_SIZE = 10
+
         while True:
             data = generate_transaction()
-            file_name = f"raw/transaction_{data['transaction_id']}.json"
-            
-            s3.put_object(
+            batch.append(data)
+            if len(batch)>= BATCH_SIZE:
+                file_name = f"raw/transaction_{data['transaction_id']}.json"
+
+                s3.put_object(
                 Bucket=BUCKET_NAME,
                 Key=file_name,
                 Body=json.dumps(data)
             )
+                print(f"SUCCESS: Uploaded {file_name} | Amount: £{data['amount']}")
+                batch = []
             
-            print(f"SUCCESS: Uploaded {file_name} | Amount: £{data['amount']}")
-            time.sleep(5) 
-            
+            time.sleep(0.5)
+      
     except Exception as e:
         print(f"CRITICAL ERROR: {e}")
 

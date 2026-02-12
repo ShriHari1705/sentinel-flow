@@ -10,6 +10,18 @@ WITH base_data AS (
         raw_json:timestamp::timestamp as transaction_timestamp,
         ingested_at as processed_at
     FROM {{ source('raw_data', 'raw_transactions') }}
+),
+
+user_stats AS (
+    SELECT 
+        *,
+        -- Window Function: Calculate average spending for this user over their last 10 transactions
+        AVG(amount_gbp) OVER (
+            PARTITION BY user_id 
+            ORDER BY transaction_timestamp 
+            ROWS BETWEEN 9 PRECEDING AND CURRENT ROW
+        ) as avg_last_10_txns
+    FROM base_data
 )
 
 SELECT
@@ -20,13 +32,15 @@ SELECT
     category,
     transaction_timestamp,
     processed_at,
-    -- Risk Scoring Logic
+    avg_last_10_txns,
+    -- Advanced Risk Scoring Logic
     CASE 
+        -- Flag if transaction is 2x the user's normal average
+        WHEN amount_gbp > (2 * avg_last_10_txns) AND amount_gbp > 50 THEN 'SUSPICIOUS_SPIKE'
         WHEN amount_gbp > 1000 THEN 'CRITICAL'
         WHEN amount_gbp > 500 THEN 'HIGH'
         ELSE 'LOW'
     END as risk_level,
-    -- Time-based feature engineering (The missing piece!)
     HOUR(transaction_timestamp) as hour_of_day,
     DAYNAME(transaction_timestamp) as day_of_week
-FROM base_data
+FROM user_stats

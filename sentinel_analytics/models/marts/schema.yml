@@ -6,18 +6,43 @@ sources:
     schema: RAW
     tables:
       - name: raw_transactions
-        description: "Raw JSON transaction data ingested from AWS S3."
+        description: "Raw JSON transaction data ingested from AWS S3 via Snowpipe."
 
 models:
   - name: fct_financial_transactions
-    description: "The Gold table containing structured and risk-scored transactions."
+    description: "Gold layer. PaySim transactions enriched with multi-signal risk scoring, velocity features, and balance drain analysis."
     columns:
       - name: transaction_id
-        data_tests:  # Using the modern 'data_tests' syntax
+        description: "UUID generated at ingestion time. Primary key."
+        data_tests:
           - unique
           - not_null
-      - name: amount_gbp
+
+      - name: type
+        description: "PaySim transaction type."
         data_tests:
+          - not_null
           - accepted_values:
-              values: [0, 1000000]
-              quote: false
+              arguments:
+                values: ['CASH_IN', 'CASH_OUT', 'DEBIT', 'PAYMENT', 'TRANSFER']
+
+      - name: is_fraud
+        description: "Ground truth fraud label from PaySim. 1 = confirmed fraud."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: risk_level
+        description: "Multi-signal risk classification derived in dbt."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['CONFIRMED_FRAUD', 'SUSPICIOUS_DRAIN', 'SUSPICIOUS_SPIKE', 'FLAGGED', 'HIGH_VELOCITY', 'LOW']
+
+      - name: amount
+        description: "Transaction amount. Must be positive."
+        data_tests:
+          - not_null

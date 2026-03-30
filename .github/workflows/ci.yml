@@ -40,9 +40,12 @@ jobs:
       - name: Install dbt
         run: pip install dbt-snowflake
 
-      - name: Write dbt profile
+      - name: Write dbt profile and private key
         run: |
-          mkdir -p ~/.dbt
+          mkdir -p ~/.dbt ~/.ssh
+          # Write private key to file (avoids multiline YAML injection issues)
+          echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/snowflake_key.p8
+          chmod 600 ~/.ssh/snowflake_key.p8
           cat <<EOF > ~/.dbt/profiles.yml
           sentinel_analytics:
             target: dev
@@ -51,7 +54,7 @@ jobs:
                 type: snowflake
                 account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
                 user: ${{ secrets.SNOWFLAKE_USER }}
-                private_key: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+                private_key_path: /home/runner/.ssh/snowflake_key.p8
                 authenticator: snowflake_jwt
                 role: SENTINEL_ROLE
                 database: SENTINEL_DB

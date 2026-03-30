@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pytest:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install boto3 pandas faker pytest
+
+      - name: Run tests
+        run: pytest tests/test_producer.py -v
+
+  dbt-compile:
+    name: dbt Compile
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt
+        run: pip install dbt-snowflake
+
+      - name: Write dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cat <<EOF > ~/.dbt/profiles.yml
+          sentinel_analytics:
+            target: dev
+            outputs:
+              dev:
+                type: snowflake
+                account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+                user: ${{ secrets.SNOWFLAKE_USER }}
+                private_key: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+                authenticator: snowflake_jwt
+                role: SENTINEL_ROLE
+                database: SENTINEL_DB
+                warehouse: SENTINEL_WH
+                schema: ANALYTICS
+                threads: 1
+          EOF
+
+      - name: dbt compile
+        working-directory: sentinel_analytics
+        run: dbt compile

@@ -10,3 +10,5 @@ target/
 logs/
 profiles.yml
 *.csv
+dashboard/.streamlit/secrets.toml
+*.p8

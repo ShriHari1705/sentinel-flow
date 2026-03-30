@@ -40,11 +40,22 @@ jobs:
       - name: Install dbt
         run: pip install dbt-snowflake
 
+      - name: Validate Snowflake secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${SNOWFLAKE_ACCOUNT:?Missing SNOWFLAKE_ACCOUNT secret}"
+          : "${SNOWFLAKE_USER:?Missing SNOWFLAKE_USER secret}"
+          : "${SNOWFLAKE_PRIVATE_KEY:?Missing SNOWFLAKE_PRIVATE_KEY secret}"
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+
       - name: Write dbt profile and private key
         run: |
           mkdir -p ~/.dbt ~/.ssh
-          # Write private key to file (avoids multiline YAML injection issues)
-          echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/snowflake_key.p8
+          printf '%s' "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/snowflake_key.p8
           chmod 600 ~/.ssh/snowflake_key.p8
           cat <<EOF > ~/.dbt/profiles.yml
           sentinel_analytics:

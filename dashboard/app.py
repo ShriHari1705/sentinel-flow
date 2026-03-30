@@ -13,11 +13,22 @@ st.set_page_config(
 # ── Snowflake connection ────────────────────────────────────────────────────────
 def get_snowflake_connection():
     from snowflake.connector import connect
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
     creds = st.secrets["snowflake"]
+
+    # Support both local (file path) and cloud (inline key content) deployments
+    if "private_key_path" in creds:
+        with open(creds["private_key_path"], "rb") as f:
+            private_key = load_pem_private_key(f.read(), password=None)
+    else:
+        private_key = load_pem_private_key(
+            creds["private_key"].encode(), password=None
+        )
+
     return connect(
         account=creds["account"],
         user=creds["user"],
-        private_key_file=creds["private_key_path"],
+        private_key=private_key,
         role=creds["role"],
         warehouse=creds["warehouse"],
         database=creds["database"],
